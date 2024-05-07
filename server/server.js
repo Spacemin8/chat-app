@@ -1,17 +1,19 @@
-const io = require('socket.io')(3001, {
-  cors: {
-    origin: '*' // Be sure to restrict this in production
-  }
-});
+const io = require('socket.io')(5000);
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  const id = socket.handshake.query.id;
+  socket.join(id);
 
-  socket.on('message', (message) => {
-    io.emit('message', message); // Broadcast to all clients
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+  socket.on('send-message', ({ recipients, text }) => {
+    console.log('send-message', { recipients, text });
+    recipients.forEach((recipient) => {
+      const newRecipients = recipients.filter((r) => r !== recipient);
+      newRecipients.push(id);
+      socket.broadcast.to(recipient).emit('receive-message', {
+        recipients: newRecipients,
+        sender: id,
+        text
+      });
+    });
   });
 });
